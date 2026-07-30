@@ -1,0 +1,70 @@
+<svg viewBox="0 0 1000 340" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <style>
+    .box { fill: #ffffff; stroke: #2b4c7e; stroke-width: 2; rx: 10; }
+    .title { font-size: 16px; font-weight: bold; fill: #1a2b3c; }
+    .sub { font-size: 11px; fill: #444; }
+    .arrow { stroke: #2b4c7e; stroke-width: 2; marker-end: url(#arrowhead); fill: none; }
+    .stage-label { font-size: 12px; fill: #2b4c7e; font-weight: bold; }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2b4c7e"/>
+    </marker>
+  </defs>
+
+  <text x="500" y="28" text-anchor="middle" font-size="18" font-weight="bold" fill="#1a2b3c">
+    Bus Bunching Detection — System Architecture
+  </text>
+
+  <!-- Ingestion -->
+  <rect class="box" x="20" y="70" width="200" height="160"/>
+  <text class="stage-label" x="120" y="60" text-anchor="middle">1. Data Ingestion</text>
+  <text class="title" x="120" y="100" text-anchor="middle">Ingestion</text>
+  <text class="sub" x="30" y="125">• BODS Timetable XML</text>
+  <text class="sub" x="30" y="143">• BODS SIRI-VM AVL feed</text>
+  <text class="sub" x="30" y="161">  (30s polling script)</text>
+  <text class="sub" x="30" y="185">Notebook 01</text>
+
+  <line class="arrow" x1="220" y1="150" x2="270" y2="150"/>
+
+  <!-- Processing -->
+  <rect class="box" x="270" y="70" width="220" height="160"/>
+  <text class="stage-label" x="380" y="60" text-anchor="middle">2. Processing</text>
+  <text class="title" x="380" y="100" text-anchor="middle">PySpark Pipeline</text>
+  <text class="sub" x="280" y="125">• Clean / dedupe / repartition</text>
+  <text class="sub" x="280" y="143">• Windowed headway calc</text>
+  <text class="sub" x="280" y="161">• Broadcast join w/ schedule</text>
+  <text class="sub" x="280" y="179">• SQLite storage (parameterised)</text>
+  <text class="sub" x="280" y="200">Notebooks 02, 03</text>
+
+  <line class="arrow" x1="490" y1="150" x2="540" y2="150"/>
+
+  <!-- Model -->
+  <rect class="box" x="540" y="70" width="220" height="160"/>
+  <text class="stage-label" x="650" y="60" text-anchor="middle">3. Model</text>
+  <text class="title" x="650" y="100" text-anchor="middle">ML Comparison</text>
+  <text class="sub" x="550" y="125">• Logistic Regression</text>
+  <text class="sub" x="550" y="143">• Random Forest</text>
+  <text class="sub" x="550" y="161">• Gradient-Boosted Trees</text>
+  <text class="sub" x="550" y="182">sklearn baseline (04) +</text>
+  <text class="sub" x="550" y="198">PySpark MLlib + CV (07)</text>
+
+  <line class="arrow" x1="760" y1="150" x2="810" y2="150"/>
+
+  <!-- Visualisation -->
+  <rect class="box" x="810" y="70" width="170" height="160"/>
+  <text class="stage-label" x="895" y="60" text-anchor="middle">4. Visualisation</text>
+  <text class="title" x="895" y="100" text-anchor="middle">EDA &amp; Reporting</text>
+  <text class="sub" x="820" y="125">• matplotlib / seaborn</text>
+  <text class="sub" x="820" y="143">charts (route-level)</text>
+  <text class="sub" x="820" y="163">• Spark UI evidence</text>
+  <text class="sub" x="820" y="181">(partitions, DAG, stages)</text>
+  <text class="sub" x="820" y="200">Notebooks 05, 06</text>
+
+  <text x="500" y="270" text-anchor="middle" class="sub" font-size="12">
+    Feedback: route-level bunching rates and model metrics feed back into report Sections 6–8 (System Design, Results, Reflection)
+  </text>
+  <text x="500" y="300" text-anchor="middle" class="sub" font-size="11" fill="#777">
+    Data sources: Stagecoach Cumbria &amp; North Lancashire (timetable) · Stagecoach North West &amp; Merseyside (AVL feed 1695)
+  </text>
+</svg>
