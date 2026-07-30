@@ -1,86 +1,116 @@
-# Sample Queries — verified against bus_bunching.db 
+# Sample Queries — verified against the expanded bunchingbus schema (real BODS data)
 
-## Q1: Bunching rate per route 
+## Q1: Bunching rate per route
 
 ```sql
 SELECT line_ref, COUNT(*) AS n_events,
-               ROUND(AVG(is_bunching)*100, 2) AS bunching_pct
-        FROM bunching_events GROUP BY line_ref HAVING n_events >= 5
-        ORDER BY bunching_pct DESC LIMIT 10;
+       ROUND(AVG(is_bunching)*100, 2) AS bunching_pct
+FROM bunching_events
+WHERE is_bunching IS NOT NULL
+GROUP BY line_ref HAVING n_events >= 5
+ORDER BY bunching_pct DESC LIMIT 10;
 ```
 
 **Result:**
 
 | line_ref | n_events | bunching_pct |
 |---|---|---|
-| 300 | 27 | 92.59 |
-| 2 | 31 | 64.52 |
-| X2 | 27 | 59.26 |
-| 41 | 29 | 58.62 |
-| 61 | 14 | 21.43 |
-| 125 | 19 | 21.05 |
-| 6A | 11 | 18.18 |
-| 104 | 6 | 16.67 |
-| 5 | 9 | 11.11 |
-| 555 | 11 | 9.09 |
+| 300 | 108 | 92.59 |
+| 2 | 124 | 64.52 |
+| X2 | 108 | 59.26 |
+| 41 | 116 | 58.62 |
+| 2X | 16 | 25.00 |
+| 61 | 56 | 21.43 |
+| 125 | 76 | 21.05 |
+| 6A | 44 | 18.18 |
+| 104 | 24 | 16.67 |
+| 5 | 36 | 11.11 |
 
-## Q2: Routes with the tightest real scheduled headway
+## Q2: Fleet summary per operator (operators ⋈ vehicle_locations)
 
 ```sql
-SELECT line_ref, route_name, ROUND(scheduled_headway_sec,1) AS scheduled_headway_sec
-        FROM routes ORDER BY scheduled_headway_sec ASC LIMIT 10;
+SELECT o.operator_ref, o.operator_name,
+       COUNT(DISTINCT v.vehicle_ref) AS distinct_vehicles,
+       COUNT(*) AS total_polls,
+       ROUND(AVG(v.bearing), 1) AS avg_bearing
+FROM vehicle_locations v
+JOIN operators o ON v.operator_ref = o.operator_ref
+GROUP BY o.operator_ref;
 ```
 
 **Result:**
 
-| line_ref | route_name | scheduled_headway_sec |
+| operator_ref | operator_name | distinct_vehicles | total_polls | avg_bearing |
+|---|---|---|---|---|
+| SCCU | Stagecoach Cumbria | 331 | 400 | 139.9 |
+| SCMY | Stagecoach Merseyside & South Lancashire | 197 | 362 | 110.5 |
+
+## Q3: Busiest routes by live GPS activity (vehicle_locations ⋈ routes)
+
+```sql
+SELECT v.line_ref, r.route_name, COUNT(*) AS n_polls
+FROM vehicle_locations v
+JOIN routes r ON v.line_ref = r.line_ref
+GROUP BY v.line_ref, r.route_name
+ORDER BY n_polls DESC LIMIT 10;
+```
+
+**Result:**
+
+| line_ref | route_name | n_polls |
 |---|---|---|
-| 721 | Route 721 | 60.0 |
-| 1 | Route 1 | 339.4 |
-| 111 | Route 111 | 407.8 |
-| 99 | Route 99 | 450.0 |
-| X2 | Route X2 | 470.2 |
-| 125 | Route 125 | 478.5 |
-| 61 | Route 61 | 488.3 |
-| 2 | Route 2 | 538.9 |
-| P1 | Route P1 | 573.9 |
-| 3 | Route 3 | 583.4 |
+| 19 | Route 19 | 109 |
+| 10A | Route 10A | 67 |
+| 2 | Route 2 | 33 |
+| 41 | Route 41 | 31 |
+| 300 | Route 300 | 29 |
+| 1 | Route 1 | 29 |
+| X2 | Route X2 | 29 |
+| 125 | Route 125 | 21 |
+| 30 | Route 30 | 18 |
+| 61 | Route 61 | 16 |
 
-## Q3: Average observed vs scheduled headway, joined (real data)
+## Q4: Scheduled stops per route (timetable_stops ⋈ routes)
 
 ```sql
-SELECT r.line_ref, r.route_name,
-               ROUND(AVG(b.observed_headway_sec),1) AS avg_observed_sec,
-               ROUND(r.scheduled_headway_sec,1) AS scheduled_headway_sec
-        FROM bunching_events b JOIN routes r ON b.line_ref = r.line_ref
-        GROUP BY r.line_ref ORDER BY avg_observed_sec ASC LIMIT 10;
+SELECT t.line_ref, r.route_name, COUNT(*) AS n_scheduled_stops
+FROM timetable_stops t
+JOIN routes r ON t.line_ref = r.line_ref
+GROUP BY t.line_ref, r.route_name
+ORDER BY n_scheduled_stops DESC LIMIT 10;
 ```
 
 **Result:**
 
-| line_ref | route_name | avg_observed_sec | scheduled_headway_sec |
+| line_ref | route_name | n_scheduled_stops |
+|---|---|---|
+| 125 | Route 125 | 34166 |
+| 1 | Route 1 | 26409 |
+| 61 | Route 61 | 25725 |
+| 3 | Route 3 | 21138 |
+| 111 | Route 111 | 20043 |
+| 68 | Route 68 | 19224 |
+| 30 | Route 30 | 18861 |
+| 1A | Route 1A | 16109 |
+| X2 | Route X2 | 14979 |
+| 2 | Route 2 | 14701 |
+
+## Q5: Bunching rate by operator (3-table chain: operators → vehicle_locations → routes → bunching_events)
+
+```sql
+SELECT o.operator_ref, o.operator_name,
+       COUNT(DISTINCT v.line_ref) AS routes_served,
+       ROUND(AVG(b.is_bunching)*100, 2) AS bunching_pct
+FROM operators o
+JOIN vehicle_locations v ON o.operator_ref = v.operator_ref
+JOIN bunching_events b ON v.line_ref = b.line_ref
+WHERE b.is_bunching IS NOT NULL
+GROUP BY o.operator_ref, o.operator_name;
+```
+
+**Result:**
+
+| operator_ref | operator_name | routes_served | bunching_pct |
 |---|---|---|---|
-| 109 | Route 109 | 114.0 | 1659.7 |
-| 9 | Route 9 | 829.0 | 870.4 |
-| 2 | Route 2 | 1207.4 | 538.9 |
-| 125 | Route 125 | 1225.7 | 478.5 |
-| 41 | Route 41 | 1236.4 | 1960.2 |
-| 55 | Route 55 | 1331.7 | 2151.7 |
-| 30 | Route 30 | 1372.3 | 843.7 |
-| 2X | Route 2X | 1425.8 | 1189.1 |
-| 400 | Route 400 | 1787.0 | 6955.0 |
-| 555 | Route 555 | 1824.7 | 1033.4 |
-
-## Q4: Count of bunching vs non-bunching events overall
-
-```sql
-SELECT is_bunching, COUNT(*) AS n FROM bunching_events GROUP BY is_bunching;
-```
-
-**Result:**
-
-| is_bunching | n |
-|---|---|
-| None | 249 |
-| 0 | 227 |
-| 1 | 97 |
+| SCCU | Stagecoach Cumbria | 74 | 29.94 |
+| SCMY | Stagecoach Merseyside & South Lancashire | 48 | 34.81 |
