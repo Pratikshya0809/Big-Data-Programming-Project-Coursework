@@ -1,0 +1,13 @@
+pyspark
+pandas
+numpy
+matplotlib
+seaborn
+scikit-learn
+faker
+ipykernel
+jupyter
+excel
+vscode
+python
+
